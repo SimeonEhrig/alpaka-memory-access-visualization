@@ -26,7 +26,7 @@ jobs:
           path: html/build
 
   deploy:
-    if: github.ref == 'refs/heads/develop' && github.repository_owner == 'SimeonEhrig'
+    if: github.ref == 'refs/heads/master' && github.repository_owner == 'SimeonEhrig'
     permissions:
       contents: read
       pages: write
