@@ -8,3 +8,5 @@
 cmake-build*/
 out/
 build/
+
+.vscode/
