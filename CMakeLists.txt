@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 project(alpaka-memory-access-visualization VERSION 1.0.0)
 
 option(alpaka_MAV_TESTING "Enable/Disable testing" OFF)
+option(alpaka_MAV_EXAMPLES "Enable/Disable examples" OFF)
 
 find_package(alpaka CONFIG QUIET)
 if (NOT alpaka_FOUND)
@@ -20,7 +21,9 @@ target_include_directories(alpaka_mav INTERFACE include)
 target_link_libraries(alpaka_mav INTERFACE alpaka::alpaka)
 add_library(alpaka::mav ALIAS alpaka_mav)
 
-add_subdirectory(examples)
+if (alpaka_MAV_EXAMPLES)
+    add_subdirectory(examples)
+endif ()
 
 if (alpaka_MAV_TESTING)
     add_subdirectory(tests)
