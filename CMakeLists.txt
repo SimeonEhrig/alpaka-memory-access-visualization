@@ -1,15 +1,32 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.25)
 
-#set(CMAKE_CUDA_STANDARD 14)
+project(alpaka-memory-access-visualization VERSION 1.0.0)
 
-set(CMAKE_CUDA_ARCHITECTURES 61)
+option(alpaka_MAV_TESTING "Enable/Disable testing" OFF)
+option(alpaka_MAV_EXAMPLES "Enable/Disable examples" OFF)
 
+find_package(alpaka CONFIG QUIET)
+if (NOT alpaka_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+            alpaka
+            GIT_REPOSITORY https://github.com/alpaka-group/alpaka3.git
+            GIT_TAG f58f3361e56dada4882bd79540651bb49961e9f7
+    )
+    FetchContent_MakeAvailable(alpaka)
+endif ()
 
-project(GPU_memory_access_visualization LANGUAGES CUDA)
+add_library(alpaka_mav INTERFACE)
+target_include_directories(alpaka_mav INTERFACE include)
+target_link_libraries(alpaka_mav INTERFACE alpaka::alpaka)
+add_library(alpaka::mav ALIAS alpaka_mav)
 
-# define header only target
-add_library(CUDA_MAV_HEADER INTERFACE)
-target_include_directories(CUDA_MAV_HEADER INTERFACE ${PROJECT_SOURCE_DIR}/include)
+if (alpaka_MAV_EXAMPLES)
+    add_subdirectory(examples)
+endif ()
 
-# the visualization function is no standalone application, therefore we test it with some examples
-add_subdirectory(examples/basic)
+if (alpaka_MAV_TESTING)
+    include(CTest)
+    enable_testing()
+    add_subdirectory(tests)
+endif ()
