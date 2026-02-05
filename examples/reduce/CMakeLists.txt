@@ -1,7 +1,7 @@
-set(_REDUCE reduce)
-add_executable(${_REDUCE})
-target_sources(${_REDUCE}
+set(TARGET_EXAMPLE_REDUCE reduce)
+add_executable(${TARGET_EXAMPLE_REDUCE})
+target_sources(${TARGET_EXAMPLE_REDUCE}
         PRIVATE reduce.cpp)
 
-target_link_libraries(${_REDUCE} PUBLIC alpaka::mav)
-alpaka_finalize(${_REDUCE})
+target_link_libraries(${TARGET_EXAMPLE_REDUCE} PUBLIC alpaka::mav)
+alpaka_finalize(${TARGET_EXAMPLE_REDUCE})

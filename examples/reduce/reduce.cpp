@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-int main()
+int example(auto const deviceSpec, auto const exec)
 {
     constexpr std::size_t n = 192;
     constexpr std::size_t frame_extent = 32;
@@ -15,7 +15,7 @@ int main()
     std::cout << "Problem size: " << n << "\nFrame extents: " << frame_extent << "\nNumber frames: " << num_frames
               << "\n";
 
-    auto devSelector = alpaka::onHost::makeDeviceSelector(alpaka::api::host, alpaka::deviceKind::cpu);
+    auto devSelector = alpaka::onHost::makeDeviceSelector(deviceSpec);
     if(devSelector.getDeviceCount() == 0)
     {
         std::cerr << "No device available! Exit application.\n";
@@ -35,8 +35,8 @@ int main()
         input[i] = i;
     }
 
-
-    queue.enqueue(frame_spec, alpaka::KernelBundle{ReduceKernel{}, input, output});
+    std::cout << "Use executor: " << alpaka::onHost::getName(exec) << "\n";
+    queue.enqueue(exec, frame_spec, alpaka::KernelBundle{ReduceKernel{}, input, output});
     alpaka::onHost::wait(queue);
 
     // reduce the partial block sums to a single value
@@ -78,4 +78,12 @@ int main()
         std::cout << "\n";
         return 0;
     }
+}
+
+int main()
+{
+    return alpaka::onHost::executeForEachIfHasDevice(
+        [=](auto const& backend)
+        { return example(backend[alpaka::object::deviceSpec], backend[alpaka::object::exec]); },
+        alpaka::onHost::allBackends(alpaka::onHost::enabledApis, alpaka::exec::enabledExecutors));
 }

@@ -26,5 +26,7 @@ if (alpaka_MAV_EXAMPLES)
 endif ()
 
 if (alpaka_MAV_TESTING)
+    include(CTest)
+    enable_testing()
     add_subdirectory(tests)
 endif ()
