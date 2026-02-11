@@ -65,7 +65,7 @@ TEMPLATE_LIST_TEST_CASE("test manually constructed onAcc::mdspan accessor", "[on
     alpaka::onHost::fill(
         queue,
         device_access_data,
-        AccessInfo{Extents::fill(0), Extents::fill(0), Extents::fill(0), 0, false});
+        AccessInfo{Extents::fill(0), Extents::fill(0), Extents::fill(0), 0, true});
 
     auto frame_spec = alpaka::onHost::FrameSpec(alpaka::divCeil(n, frame_extents), frame_extents);
     queue.enqueue(exec, frame_spec, alpaka::KernelBundle(Kernel{}, device_data, device_access_data));

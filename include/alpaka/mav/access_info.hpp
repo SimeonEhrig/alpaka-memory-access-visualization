@@ -11,15 +11,16 @@ namespace alpaka::mav
         T_ThreadIndex local_thread_index;
         T_ThreadIndex block_index;
         std::size_t access_counter = 0;
-        // false == read
-        // true == write
+        // true == read
+        // false == write
         bool read_write;
     };
- template<alpaka::concepts::Vector T_DataIndex, alpaka::concepts::Vector T_ThreadIndex>
+
+    template<alpaka::concepts::Vector T_DataIndex, alpaka::concepts::Vector T_ThreadIndex>
     std::ostream& operator<<(std::ostream& s, AccessInfo<T_DataIndex, T_ThreadIndex> const& ai)
     {
         return s << "AccessInfo{ index=" << ai.data_index << ", local thread idx=" << ai.local_thread_index
                  << ", block idx=" << ai.block_index << ", num access=" << ai.access_counter << ", "
-                 << (ai.read_write ? "write" : "read") << " }";
+                 << (ai.read_write ? "read" : "write") << " }";
     }
 } // namespace alpaka::mav
