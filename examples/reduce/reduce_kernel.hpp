@@ -1,14 +1,28 @@
 #pragma once
 
 #include <alpaka/alpaka.hpp>
+#if USE_MAV == 1
+#    include <alpaka/mav/mav.hpp>
+#endif
 
 struct ReduceKernel
 {
     ALPAKA_FN_ACC void operator()(
         alpaka::onAcc::concepts::Acc auto const& acc,
-        alpaka::concepts::IDataSource auto input,
-        alpaka::concepts::IMdSpan auto output) const
+        alpaka::concepts::IDataSource auto raw_input,
+        alpaka::concepts::IMdSpan auto output
+#if USE_MAV == 1
+        ,
+        alpaka::concepts::IMdSpan auto access_data
+#endif
+    ) const
     {
+#if USE_MAV == 1
+        alpaka::mav::onAcc::MdSpan input{acc, raw_input, access_data};
+#else
+        auto& input = raw_input;
+#endif
+
         using Vec = typename decltype(acc[alpaka::frame::count])::UniVec;
         using VecType = typename Vec::type;
 

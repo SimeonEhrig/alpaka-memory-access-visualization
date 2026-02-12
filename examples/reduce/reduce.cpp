@@ -1,3 +1,5 @@
+// set to 0 to disable mav support
+#define USE_MAV 1
 #include "reduce_helper.hpp"
 #include "reduce_kernel.hpp"
 
@@ -5,7 +7,14 @@
 
 #include <iostream>
 
-int example(auto const deviceSpec, auto const exec)
+#if USE_MAV == 1
+#    include <alpaka/mav/mav.hpp>
+
+#    include <filesystem>
+#    include <fstream>
+#endif
+
+int example(auto const deviceSpec, auto const exec, int argc, char** argv)
 {
     constexpr std::size_t n = 192;
     constexpr std::size_t frame_extent = 32;
@@ -28,16 +37,52 @@ int example(auto const deviceSpec, auto const exec)
 
     alpaka::concepts::IBuffer<int> auto input = alpaka::onHost::allocUnified<int>(device, n);
     alpaka::concepts::IBuffer<int> auto output = alpaka::onHost::allocUnified<int>(device, num_frames);
+    alpaka::onHost::iota(queue, int{0}, input);
 
-    // initialize data
-    for(auto i = 0; i < n; ++i)
-    {
-        input[i] = i;
-    }
+#if USE_MAV == 1
+    using Extents = ALPAKA_TYPEOF(input.getExtents());
+    using AccessInfo = alpaka::mav::AccessInfo<Extents, Extents>;
+    alpaka::concepts::IBuffer<AccessInfo> auto access_data = alpaka::onHost::allocUnified<AccessInfo>(device, n);
+    alpaka::onHost::fill(
+        queue,
+        access_data,
+        AccessInfo{Extents::fill(0), Extents::fill(0), Extents::fill(0), 0, true});
+#endif
 
     std::cout << "Use executor: " << alpaka::onHost::getName(exec) << "\n";
-    queue.enqueue(exec, frame_spec, alpaka::KernelBundle{ReduceKernel{}, input, output});
+    queue.enqueue(
+        exec,
+        frame_spec,
+        alpaka::KernelBundle{
+            ReduceKernel{},
+            input,
+            output
+#if USE_MAV == 1
+            ,
+            access_data
+#endif
+        });
     alpaka::onHost::wait(queue);
+
+#if USE_MAV == 1
+    auto access_json = alpaka::mav::getJSONFromData(
+        alpaka::mav::onHost::MdSpan("reduce" + alpaka::onHost::getName(exec), input, access_data),
+        frame_spec);
+    auto exe_dir = std::filesystem::weakly_canonical(std::filesystem::path(argv[0])).parent_path();
+    auto access_data_path = exe_dir / ("reduce_" + alpaka::onHost::getName(exec) + ".json");
+    std::cout << "write access data to: " << access_data_path << "\n";
+    std::ofstream file(access_data_path);
+    if(file.is_open())
+    {
+        file << access_json;
+        file.close();
+    }
+    else
+    {
+        std::cerr << "ERROR: Could not write to " << access_data_path << "\n";
+        return 1;
+    }
+#endif
 
     // reduce the partial block sums to a single value
     int calculated_sum = 0;
@@ -80,10 +125,10 @@ int example(auto const deviceSpec, auto const exec)
     }
 }
 
-int main()
+int main(int argc, char** argv)
 {
     return alpaka::onHost::executeForEachIfHasDevice(
         [=](auto const& backend)
-        { return example(backend[alpaka::object::deviceSpec], backend[alpaka::object::exec]); },
+        { return example(backend[alpaka::object::deviceSpec], backend[alpaka::object::exec], argc, argv); },
         alpaka::onHost::allBackends(alpaka::onHost::enabledApis, alpaka::exec::enabledExecutors));
 }
