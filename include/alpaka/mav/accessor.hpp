@@ -12,14 +12,14 @@ namespace alpaka::mav::details
         bool& m_read_write;
 
     public:
-        AccessProxy(TData* const ptr, std::size_t& access_counter, bool& read_write)
+        constexpr AccessProxy(TData* const ptr, std::size_t& access_counter, bool& read_write)
             : m_ptr(ptr)
             , m_access_counter(access_counter)
             , m_read_write(read_write)
         {
         }
 
-        AccessProxy& operator=(TData const& value)
+        constexpr AccessProxy& operator=(TData const& value)
         {
             *m_ptr = value;
             m_read_write = false;
@@ -27,7 +27,7 @@ namespace alpaka::mav::details
             return *this;
         }
 
-        operator TData() const
+        constexpr operator TData() const
         {
             m_read_write = true;
             m_access_counter += 1;
