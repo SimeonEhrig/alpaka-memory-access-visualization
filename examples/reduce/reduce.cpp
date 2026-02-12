@@ -37,12 +37,7 @@ int example(auto const deviceSpec, auto const exec, int argc, char** argv)
 
     alpaka::concepts::IBuffer<int> auto input = alpaka::onHost::allocUnified<int>(device, n);
     alpaka::concepts::IBuffer<int> auto output = alpaka::onHost::allocUnified<int>(device, num_frames);
-
-    // initialize data
-    for(auto i = 0; i < n; ++i)
-    {
-        input[i] = i;
-    }
+    alpaka::onHost::iota(queue, int{0}, input);
 
 #if USE_MAV == 1
     using Extents = ALPAKA_TYPEOF(input.getExtents());
@@ -85,6 +80,7 @@ int example(auto const deviceSpec, auto const exec, int argc, char** argv)
     else
     {
         std::cerr << "ERROR: Could not write to " << access_data_path << "\n";
+        return 1;
     }
 #endif
 

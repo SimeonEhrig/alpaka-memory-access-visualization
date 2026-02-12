@@ -1,6 +1,7 @@
 #pragma once
 
 #include "access_info.hpp"
+#include "accessor.hpp"
 
 #include <alpaka/alpaka.hpp>
 
@@ -107,13 +108,15 @@ namespace alpaka::mav
             {
             }
 
-            constexpr DataMdSpan::reference operator[](concepts::Vector auto const& idx)
+            constexpr alpaka::mav::details::AccessProxy<T_Type> operator[](concepts::Vector auto const& idx)
             {
                 m_access_mdspan[idx].data_index = idx;
                 m_access_mdspan[idx].local_thread_index = m_local_thread_idx;
                 m_access_mdspan[idx].block_index = m_block_idx;
-                m_access_mdspan[idx].access_counter += 1;
-                return DataMdSpan::operator[](idx);
+                return {
+                    &DataMdSpan::operator[](idx),
+                    m_access_mdspan[idx].access_counter,
+                    m_access_mdspan[idx].read_write};
             }
         };
     } // namespace onAcc

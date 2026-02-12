@@ -13,7 +13,7 @@ struct ReduceKernel
         alpaka::concepts::IMdSpan auto output
 #if USE_MAV == 1
         ,
-        alpaka::concepts::IDataSource auto access_data
+        alpaka::concepts::IMdSpan auto access_data
 #endif
     ) const
     {
