@@ -37,7 +37,7 @@ int example(auto const deviceSpec, auto const exec, int argc, char** argv)
 
     alpaka::onHost::FrameSpec const frame_spec
         = alpaka::onHost::FrameSpec(alpaka::divCeil(n, frame_extent), frame_extent);
-    std::size_t const num_frames = frame_spec.m_numFrames.product();
+    std::size_t const num_frames = frame_spec.getNumFrames().product();
 
     std::cout << "Problem size: " << n << "\nFrame extents: " << frame_extent << "\nNumber frames: " << num_frames
               << "\n";

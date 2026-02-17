@@ -19,7 +19,7 @@ int example(auto const deviceSpec, auto const exec, int argc, char** argv)
     constexpr std::size_t n = 192;
     constexpr std::size_t frame_extent = 32;
     alpaka::onHost::FrameSpec const frame_spec = get_reduce_frame_spec(n, frame_extent);
-    std::size_t const num_frames = frame_spec.m_numFrames.product();
+    std::size_t const num_frames = frame_spec.getNumFrames().product();
 
     std::cout << "Problem size: " << n << "\nFrame extents: " << frame_extent << "\nNumber frames: " << num_frames
               << "\n";

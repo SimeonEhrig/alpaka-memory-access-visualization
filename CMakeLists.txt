@@ -11,7 +11,7 @@ if (NOT alpaka_FOUND)
     FetchContent_Declare(
             alpaka
             GIT_REPOSITORY https://github.com/alpaka-group/alpaka3.git
-            GIT_TAG f58f3361e56dada4882bd79540651bb49961e9f7
+            GIT_TAG 3d491efd92bff57e8bfb5abc51f0316e47c3ae72
     )
     FetchContent_MakeAvailable(alpaka)
 endif ()

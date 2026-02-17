@@ -33,10 +33,10 @@ namespace alpaka::mav
         jsStream << "\"z\": " << grid_dim.z();
         jsStream << "},";
 
-        alpaka::Vec<typename ALPAKA_TYPEOF(frameSpec)::type, 3> block_dim{1, 1, 1};
-        for(auto i = 0; i < ALPAKA_TYPEOF(frameSpec.m_frameExtent)::dim(); ++i)
+        alpaka::Vec<typename ALPAKA_TYPEOF(frameSpec)::index_type, 3> block_dim{1, 1, 1};
+        for(auto i = 0; i < ALPAKA_TYPEOF(frameSpec.getFrameExtents())::dim(); ++i)
         {
-            block_dim[i] = frameSpec.m_frameExtent[i];
+            block_dim[i] = frameSpec.getFrameExtents()[i];
         }
         // Then store the block dimensions
         jsStream << "\"BlockDimensions\": {";
@@ -47,7 +47,7 @@ namespace alpaka::mav
 
         // TODO: clarify what is the warpsize in alpaka 3
         // Then store the warp size
-        jsStream << "\"WarpSize\": " << frameSpec.m_frameExtent.x();
+        jsStream << "\"WarpSize\": " << frameSpec.getFrameExtents().x();
 
         // Store the original size
         jsStream << ",\"OriginalSize\": " << data.get_access_mdspan().getExtents().product();
