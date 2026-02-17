@@ -82,7 +82,7 @@ TEMPLATE_LIST_TEST_CASE(
     constexpr std::size_t n = 8;
     constexpr std::size_t frame_extents = 4;
     auto frame_spec = alpaka::onHost::FrameSpec(alpaka::divCeil(n, frame_extents * 2), frame_extents);
-    std::size_t num_frames = frame_spec.m_numFrames.product();
+    std::size_t num_frames = frame_spec.getNumFrames().product();
 
     auto devSelector = alpaka::onHost::makeDeviceSelector(deviceSpec);
     REQUIRE(devSelector.getDeviceCount() > 0);

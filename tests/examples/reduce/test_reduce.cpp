@@ -22,7 +22,7 @@ TEMPLATE_LIST_TEST_CASE("test reduce example", "[example]", TestBackends)
     std::size_t const n = GENERATE(192, 253, 10457);
     std::size_t const frame_extent = GENERATE(2, 8, 16, 32);
     alpaka::onHost::FrameSpec frame_spec = get_reduce_frame_spec(n, frame_extent);
-    std::size_t const num_frames = frame_spec.m_numFrames.product();
+    std::size_t const num_frames = frame_spec.getNumFrames().product();
 
     INFO(
         "Problem size: " << n << "\n  Frame extents: " << frame_extent << "\n  Number frames: " << num_frames << "\n");
