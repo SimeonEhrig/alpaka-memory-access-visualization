@@ -40,13 +40,17 @@ int example(auto const deviceSpec, auto const exec, int argc, char** argv)
     alpaka::onHost::iota(queue, int{0}, input);
 
 #if USE_MAV == 1
+    constexpr std::size_t num_logs_per_element = 20;
+
     using Extents = ALPAKA_TYPEOF(input.getExtents());
-    using AccessInfo = alpaka::mav::AccessInfo<Extents, Extents>;
-    alpaka::concepts::IBuffer<AccessInfo> auto access_data = alpaka::onHost::allocUnified<AccessInfo>(device, n);
-    alpaka::onHost::fill(
-        queue,
-        access_data,
-        AccessInfo{Extents::fill(0), Extents::fill(0), Extents::fill(0), 0, true});
+    using AccessInfo = alpaka::mav::AccessInfo<Extents>;
+    alpaka::concepts::IBuffer<AccessInfo> auto access_data
+        = alpaka::onHost::allocUnified<AccessInfo>(device, n * num_logs_per_element);
+    alpaka::onHost::fill(queue, access_data, AccessInfo{Extents::fill(0), Extents::fill(0), true});
+    using ExtentsType = typename Extents::type;
+    alpaka::concepts::IBuffer<ExtentsType> auto counter_data = alpaka::onHost::allocUnified<ExtentsType>(queue, n);
+    alpaka::onHost::fill(queue, counter_data, ExtentsType{0});
+
 #endif
 
     std::cout << "Use executor: " << alpaka::onHost::getName(exec) << "\n";
@@ -59,7 +63,8 @@ int example(auto const deviceSpec, auto const exec, int argc, char** argv)
             output
 #if USE_MAV == 1
             ,
-            access_data
+            access_data,
+            counter_data
 #endif
         });
     alpaka::onHost::wait(queue);
@@ -67,7 +72,9 @@ int example(auto const deviceSpec, auto const exec, int argc, char** argv)
 #if USE_MAV == 1
     auto access_json = alpaka::mav::getJSONFromData(
         alpaka::mav::onHost::MdSpan("reduce" + alpaka::onHost::getName(exec), input, access_data),
-        frame_spec);
+        frame_spec,
+        counter_data,
+        num_logs_per_element);
     auto exe_dir = std::filesystem::weakly_canonical(std::filesystem::path(argv[0])).parent_path();
     auto access_data_path = exe_dir / ("reduce_" + alpaka::onHost::getName(exec) + ".json");
     std::cout << "write access data to: " << access_data_path << "\n";

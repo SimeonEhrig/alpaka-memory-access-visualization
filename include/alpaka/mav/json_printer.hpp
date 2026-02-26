@@ -5,7 +5,9 @@ namespace alpaka::mav
 {
     std::string getJSONFromData(
         alpaka::mav::onHost::concepts::MdSpan auto const& data,
-        alpaka::onHost::concepts::FrameSpec auto const& frameSpec)
+        alpaka::onHost::concepts::FrameSpec auto const& frameSpec,
+        alpaka::concepts::IDataSource auto const& counter_data,
+        std::integral auto const max_numbers_logs)
     {
         static_assert(ALPAKA_TYPEOF(data)::dim() <= 3);
         std::stringstream jsStream;
@@ -87,23 +89,33 @@ namespace alpaka::mav
         // Loop through all memory access logs and store them
         // To save on storage space and parsing time (as this is the biggest part of the data) we store an array with
         // the data entries directly instead of using an object with names for each entry
-        for(std::integral auto id = 0; id < data.getExtents().product(); id++)
+        for(alpaka::concepts::Vector auto idx : alpaka::IdxRange(counter_data.getExtents()))
         {
-            IndexVecType idx{id};
-            jsStream << "[";
-            jsStream << "\"" << std::hex << data.ptr(idx) << "\",";
-            jsStream << std::dec << data.get_access_mdspan()[idx].block_index.x() << ",";
-            jsStream << data.get_access_mdspan()[idx].local_thread_index.x() << ",";
-            jsStream << (data.get_access_mdspan()[idx].read_write ? "true" : "false");
-            jsStream << "]";
-
-            // If this is not the last element, add a comma
-            if(id < data.getExtents().product() - 1)
+            for(auto log_number = 0; log_number < counter_data[idx]; log_number++)
             {
+                if(log_number >= max_numbers_logs)
+                {
+                    std::cerr
+                        << "WARNING: idx=" << idx << " counted " << counter_data[idx] << " memory accesses. But only "
+                        << max_numbers_logs
+                        << " can be stored. Increase the number of logs per element to store all access events.\n";
+                    break;
+                }
+                auto info = data.get_access_mdspan()[idx * max_numbers_logs + log_number];
+
+                jsStream << "[";
+                jsStream << "\"" << std::hex << data.ptr(idx) << "\",";
+                jsStream << std::dec << info.block_index.x() << ",";
+                jsStream << info.local_thread_index.x() << ",";
+                jsStream << (info.read_write ? "true" : "false");
+                jsStream << "]";
+
                 jsStream << ",";
             }
         }
 
+        // decrease the write cursor position by 1 to overwrite the last comma with the parentheses ]
+        jsStream.seekp(-1, std::ios_base::end);
         // Close the MemoryAccessLogs array
         jsStream << "]";
 

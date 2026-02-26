@@ -14,9 +14,10 @@ struct Kernel
     ALPAKA_FN_ACC void operator()(
         alpaka::onAcc::concepts::Acc auto const& acc,
         alpaka::concepts::IMdSpan auto data,
-        alpaka::concepts::IMdSpan auto access_data) const
+        alpaka::concepts::IMdSpan auto access_data,
+        alpaka::concepts::IMdSpan auto counter_data) const
     {
-        alpaka::mav::onAcc::MdSpan mav_span(acc, data, access_data);
+        alpaka::mav::onAcc::MdSpan mav_span(acc, data, access_data, counter_data);
         for(auto frame_index : alpaka::onAcc::makeIdxMap(
                 acc,
                 alpaka::onAcc::worker::linearBlocksInGrid,
@@ -47,6 +48,7 @@ TEMPLATE_LIST_TEST_CASE("test manually constructed onAcc::mdspan accessor", "[on
 
     std::size_t const n = GENERATE(192, 253, 10457);
     std::size_t const frame_extents = GENERATE(2, 10, 16, 32);
+    std::size_t const num_logs_per_element = 10;
 
     auto devSelector = alpaka::onHost::makeDeviceSelector(deviceSpec);
     REQUIRE(devSelector.getDeviceCount() > 0);
@@ -58,21 +60,22 @@ TEMPLATE_LIST_TEST_CASE("test manually constructed onAcc::mdspan accessor", "[on
 
     alpaka::concepts::IBuffer<int> auto device_data = alpaka::onHost::alloc<int>(device, n);
     using Extents = ALPAKA_TYPEOF(device_data.getExtents());
-    using AccessInfo = alpaka::mav::AccessInfo<Extents, Extents>;
-    alpaka::concepts::IBuffer<AccessInfo> auto device_access_data = alpaka::onHost::alloc<AccessInfo>(device, n);
+    using AccessInfo = alpaka::mav::AccessInfo<Extents>;
+    alpaka::concepts::IBuffer<AccessInfo> auto device_access_data
+        = alpaka::onHost::alloc<AccessInfo>(device, n * num_logs_per_element);
+    using ExtentsType = typename Extents::type;
+    alpaka::concepts::IBuffer<ExtentsType> auto counter_data = alpaka::onHost::allocUnified<ExtentsType>(queue, n);
 
     alpaka::onHost::fill(queue, device_data, 1);
-    alpaka::onHost::fill(
-        queue,
-        device_access_data,
-        AccessInfo{Extents::fill(0), Extents::fill(0), Extents::fill(0), 0, true});
+    alpaka::onHost::fill(queue, device_access_data, AccessInfo{Extents::fill(0), Extents::fill(0), true});
+    alpaka::onHost::fill(queue, counter_data, ExtentsType{0});
+
 
     auto frame_spec = alpaka::onHost::FrameSpec(alpaka::divCeil(n, frame_extents), frame_extents);
-    queue.enqueue(exec, frame_spec, alpaka::KernelBundle(Kernel{}, device_data, device_access_data));
+    queue.enqueue(exec, frame_spec, alpaka::KernelBundle(Kernel{}, device_data, device_access_data, counter_data));
 
     alpaka::concepts::IBuffer<int> auto host_data = alpaka::onHost::allocHost<int>(n);
     alpaka::concepts::IBuffer<AccessInfo> auto host_access_data = alpaka::onHost::allocHost<AccessInfo>(n);
-
     alpaka::onHost::memcpy(queue, host_data, device_data);
     alpaka::onHost::memcpy(queue, host_access_data, device_access_data);
 
@@ -85,6 +88,6 @@ TEMPLATE_LIST_TEST_CASE("test manually constructed onAcc::mdspan accessor", "[on
 
     for(auto i = 0u; i < n; ++i)
     {
-        REQUIRE(host_access_data[i].access_counter == 1);
+        REQUIRE(counter_data[i] == 1);
     }
 }
