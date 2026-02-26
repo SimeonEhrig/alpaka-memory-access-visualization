@@ -14,11 +14,12 @@ struct ReduceKernel
         alpaka::onAcc::concepts::Acc auto const& acc,
         alpaka::concepts::IDataSource auto raw_input,
         alpaka::concepts::IMdSpan auto output,
-        alpaka::concepts::IMdSpan auto access_data
+        alpaka::concepts::IMdSpan auto access_data,
+        alpaka::concepts::IMdSpan auto counter_data
 
     ) const
     {
-        alpaka::mav::onAcc::MdSpan input{acc, raw_input, access_data};
+        alpaka::mav::onAcc::MdSpan input{acc, raw_input, access_data, counter_data};
 
         using Vec = typename decltype(acc[alpaka::frame::count])::UniVec;
         using VecType = typename Vec::type;
@@ -79,8 +80,9 @@ TEMPLATE_LIST_TEST_CASE(
 
     INFO("Device spec: " << alpaka::onHost::getName(deviceSpec) << ", Executor: " << alpaka::onHost::getName(exec));
 
-    constexpr std::size_t n = 8;
+    constexpr std::size_t n = 16;
     constexpr std::size_t frame_extents = 4;
+    constexpr std::size_t num_logs_per_element = 10;
     auto frame_spec = alpaka::onHost::FrameSpec(alpaka::divCeil(n, frame_extents * 2), frame_extents);
     std::size_t num_frames = frame_spec.getNumFrames().product();
 
@@ -97,14 +99,16 @@ TEMPLATE_LIST_TEST_CASE(
     alpaka::onHost::iota(queue, int{0}, input);
 
     using Extents = ALPAKA_TYPEOF(input.getExtents());
-    using AccessInfo = alpaka::mav::AccessInfo<Extents, Extents>;
-    alpaka::concepts::IBuffer<AccessInfo> auto access_data = alpaka::onHost::allocUnified<AccessInfo>(queue, n);
-    alpaka::onHost::fill(
-        queue,
-        access_data,
-        AccessInfo{Extents::fill(0), Extents::fill(0), Extents::fill(0), 0, true});
+    using ExtentsType = typename Extents::type;
+    using AccessInfo = alpaka::mav::AccessInfo<Extents>;
+    alpaka::concepts::IBuffer<AccessInfo> auto access_data
+        = alpaka::onHost::allocUnified<AccessInfo>(queue, alpaka::Vec{n * num_logs_per_element});
+    alpaka::concepts::IBuffer<ExtentsType> auto counter_data = alpaka::onHost::allocUnified<ExtentsType>(queue, n);
 
-    queue.enqueue(exec, frame_spec, alpaka::KernelBundle{ReduceKernel{}, input, output, access_data});
+    alpaka::onHost::fill(queue, access_data, AccessInfo{Extents::fill(0), Extents::fill(0), true});
+    alpaka::onHost::fill(queue, counter_data, ExtentsType{0});
+
+    queue.enqueue(exec, frame_spec, alpaka::KernelBundle{ReduceKernel{}, input, output, access_data, counter_data});
     alpaka::onHost::wait(queue);
 
     int calculated_sum = 0;
@@ -117,7 +121,7 @@ TEMPLATE_LIST_TEST_CASE(
     REQUIRE(calculated_sum == expected_sum);
 
     // number of memory access per position
-    std::vector<std::size_t> expected_memory_accesses = {7, 5, 3, 3, 1, 1, 1, 1};
+    std::vector<std::size_t> expected_memory_accesses = {7, 5, 3, 3, 1, 1, 1, 1, 7, 5, 3, 3, 1, 1, 1, 1};
     REQUIRE(expected_memory_accesses.size() == n);
 
     std::vector<std::size_t> counted_memory_accesses(
@@ -126,8 +130,20 @@ TEMPLATE_LIST_TEST_CASE(
 
     for(auto i = 0; i < counted_memory_accesses.size(); ++i)
     {
-        counted_memory_accesses[i] = access_data[i].access_counter;
+        counted_memory_accesses[i] = counter_data[i];
     }
 
     REQUIRE_THAT(counted_memory_accesses, Catch::Matchers::Equals(expected_memory_accesses));
+
+    // uncomment for debugging purpose
+    // for(auto id = 0; id < n; ++id)
+    // {
+    //     std::cout << "id: " << id << " -> mem access counter: " << counted_memory_accesses[id] << "\n";
+    //     for(auto event_id = 0; event_id < counted_memory_accesses[id] && event_id < num_logs_per_element;
+    //     ++event_id)
+    //     {
+    //         std::cout << "  id/event: [" << id << " | " << event_id
+    //                   << " ]: " << access_data[alpaka::Vec{id * 10 + event_id}] << std::endl;
+    //     }
+    // }
 }

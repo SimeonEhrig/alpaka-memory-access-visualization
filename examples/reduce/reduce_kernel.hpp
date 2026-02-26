@@ -13,12 +13,13 @@ struct ReduceKernel
         alpaka::concepts::IMdSpan auto output
 #if USE_MAV == 1
         ,
-        alpaka::concepts::IMdSpan auto access_data
+        alpaka::concepts::IMdSpan auto access_data,
+        alpaka::concepts::IMdSpan auto counter_data
 #endif
     ) const
     {
 #if USE_MAV == 1
-        alpaka::mav::onAcc::MdSpan input{acc, raw_input, access_data};
+        alpaka::mav::onAcc::MdSpan input{acc, raw_input, access_data, counter_data};
 #else
         auto& input = raw_input;
 #endif

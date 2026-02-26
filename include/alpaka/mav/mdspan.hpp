@@ -21,11 +21,8 @@ namespace alpaka::mav
         {
         private:
             using DataMdSpan = alpaka::MdSpan<T_Type, T_Extents, T_Pitches, T_MemAlignment>;
-            using AccessMdSpan = alpaka::MdSpan<
-                alpaka::mav::AccessInfo<T_Extents, T_Extents>,
-                T_AccessExtents,
-                T_AccessPitches,
-                T_AccessMemAlignment>;
+            using AccessMdSpan = alpaka::
+                MdSpan<alpaka::mav::AccessInfo<T_Extents>, T_AccessExtents, T_AccessPitches, T_AccessMemAlignment>;
 
             AccessMdSpan m_access_mdspan;
             std::string m_name;
@@ -81,42 +78,54 @@ namespace alpaka::mav
             alpaka::onAcc::concepts::Acc T_Acc,
             concepts::Vector T_AccessExtents,
             concepts::Vector T_AccessPitches,
+            concepts::Vector T_CounterExtents,
+            concepts::Vector T_CounterPitches,
             concepts::Alignment T_MemAlignment = Alignment<>,
-            concepts::Alignment T_AccessMemAlignment = Alignment<>>
+            concepts::Alignment T_AccessMemAlignment = Alignment<>,
+            concepts::Alignment T_CounterMemAlignment = Alignment<>>
         struct MdSpan : public alpaka::MdSpan<T_Type, T_Extents, T_Pitches, T_MemAlignment>
         {
         private:
             using DataMdSpan = alpaka::MdSpan<T_Type, T_Extents, T_Pitches, T_MemAlignment>;
-            using AccessMdSpan = alpaka::MdSpan<
-                alpaka::mav::AccessInfo<T_Extents, T_Extents>,
-                T_AccessExtents,
-                T_AccessPitches,
-                T_AccessMemAlignment>;
+            using AccessMdSpan = alpaka::
+                MdSpan<alpaka::mav::AccessInfo<T_Extents>, T_AccessExtents, T_AccessPitches, T_AccessMemAlignment>;
+            using CounterMdSpan
+                = alpaka::MdSpan<typename T_Extents::type, T_CounterExtents, T_CounterPitches, T_CounterMemAlignment>;
+
 
             T_Acc const& m_acc;
             T_Extents const m_local_thread_idx;
             T_Extents const m_block_idx;
             AccessMdSpan m_access_mdspan;
+            CounterMdSpan m_counter_mdspan;
+
 
         public:
-            constexpr MdSpan(T_Acc const& acc, DataMdSpan const& data_mdspan, AccessMdSpan const& access_mdspan)
+            constexpr MdSpan(
+                T_Acc const& acc,
+                DataMdSpan const& data_mdspan,
+                AccessMdSpan const& access_mdspan,
+                CounterMdSpan const& counter_md_span)
                 : alpaka::MdSpan<T_Type, T_Extents, T_Pitches, T_MemAlignment>(data_mdspan)
                 , m_acc(acc)
                 , m_local_thread_idx(acc[alpaka::layer::thread].idx())
                 , m_block_idx(acc[alpaka::layer::block].idx())
                 , m_access_mdspan(access_mdspan)
+                , m_counter_mdspan(counter_md_span)
             {
             }
 
-            constexpr alpaka::mav::details::AccessProxy<T_Type> operator[](concepts::Vector auto const& idx)
+            constexpr auto operator[](concepts::Vector auto const& idx)
             {
-                m_access_mdspan[idx].data_index = idx;
-                m_access_mdspan[idx].local_thread_index = m_local_thread_idx;
-                m_access_mdspan[idx].block_index = m_block_idx;
-                return {
+                std::size_t const max_counter = m_access_mdspan.getExtents()[0] / this->getExtents()[0];
+
+                return alpaka::mav::details::AccessProxy{
                     &DataMdSpan::operator[](idx),
-                    m_access_mdspan[idx].access_counter,
-                    m_access_mdspan[idx].read_write};
+                    m_local_thread_idx,
+                    m_block_idx,
+                    m_counter_mdspan[idx],
+                    &(m_access_mdspan[alpaka::Vec{idx[0] * max_counter}]),
+                    max_counter};
             }
         };
     } // namespace onAcc
