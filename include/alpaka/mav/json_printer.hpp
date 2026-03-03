@@ -91,7 +91,8 @@ namespace alpaka::mav
         // the data entries directly instead of using an object with names for each entry
         for(alpaka::concepts::Vector auto idx : alpaka::IdxRange(counter_data.getExtents()))
         {
-            for(auto log_number = 0; log_number < counter_data[idx]; log_number++)
+            using IdxType = typename ALPAKA_TYPEOF(data.getExtents())::type;
+            for(IdxType log_number = 0; log_number < counter_data[idx]; ++log_number)
             {
                 if(log_number >= max_numbers_logs)
                 {
