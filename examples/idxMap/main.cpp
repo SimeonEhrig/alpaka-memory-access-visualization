@@ -6,6 +6,11 @@
 #include <sstream>
 #include <string>
 
+#ifdef DRAW_GRAPH_PNG
+#    include "draw_data.hpp"
+#endif
+
+
 struct Kernel
 {
     ALPAKA_FN_ACC void operator()(alpaka::onAcc::concepts::Acc auto const& acc, alpaka::concepts::IMdSpan auto out)
@@ -102,6 +107,10 @@ int example(auto const deviceSpec, auto const exec)
         std::cout << "\n" << dataSourceToStr(host_out) << "\n\n";
     }
     std::cout << dataSourceToStrSparse(host_out) << "\n";
+
+#ifdef DRAW_GRAPH_PNG
+    drawGraphPNG(host_out, alpaka::onHost::getName(exec));
+#endif
 
     return 0;
 }
